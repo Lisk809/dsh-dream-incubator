@@ -28,16 +28,29 @@ dsh plugin --profile web add dsh-dream-incubator
 | `cooldownMs` | `3600000` | 同一会话两次做梦之间的最小安静间隔 |
 | `minMaterialEvents` | `4` | 距上一场梦之后的最小素材事件数，不足不做 |
 | `maxDailyDreams` | `8` | 每会话每日硬上限（午夜重置） |
-| `styleRotationDays` | `4` | 六风格矩阵每 N 天轮转一次 |
+| `styleRotationDays` | `4` | 风格库（内置 + `styles` 自定义）每 N 天轮转一次 |
 | `noiseIntensity` | `medium` | 激活-合成噪声强度：`low` \| `medium` \| `high` |
 | `maxOutputTokens` | `500` | 扫描与做梦两次模型调用的输出 token 上限 |
 | `timeoutMs` | `120000` | 单场梦周期的端到端截止时间 |
 | `privacyMode` | `false` | 开启后，扫描提示词只收到消息数量与工具名，不包含用户文本 |
 | `provider` / `model` | `null` | 可选显式模型路由（必须成对出现）。缺省时复用会话最新记录的 `request/header` 路由 |
+| `styles` | `[]` | 自定义梦境风格，追加在内置六风格之后、一同参与轮换。每项：`id`（唯一，不得与内置重名）、`nameZh` / `nameEn`、`trigger`（`fatigue` \| `joy` \| `anxiety` \| `boredom` \| `confusion` \| `conflict`）、`imagery`（非空字符串数组）、可选 `palette`（CSS 调色板键，缺省取风格 `id`） |
 | `storePath` | `~/.dsh/dream-incubator/dreams.json` | 梦境台账 JSON 位置 |
 | `serveUi` | `true` | 在 `/dreams` 提供沉浸式页面（仅 web profile） |
 
-非法值（未知键、非整数上限、`provider` 无 `model`……）在加载时抛错——harness 会显示确切消息。
+非法值（未知键、非整数上限、`provider` 无 `model`、重复风格 id……）在加载时抛错——harness 会显示确切消息。
+
+自定义风格示例：
+
+```yaml
+styles:
+  - id: cosmic
+    nameZh: 星际漂流
+    nameEn: Cosmic Drift
+    trigger: boredom
+    imagery: [深空尘埃, 失重的茶, 土星环上的雪]
+    # palette: nebula   # 可选；缺省取风格 id
+```
 
 ## 命令
 

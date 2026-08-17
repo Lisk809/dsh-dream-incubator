@@ -120,6 +120,51 @@ describe('plugin integration', () => {
     expect(DreamStore.open(storePath).byId(dream.id)?.title).toBe('走廊尽头的窗')
   })
 
+  it('runs a full dream cycle with a user-defined style', async () => {
+    const calls = { n: 0 }
+    const customConfig = resolveDreamIncubatorConfig({
+      cooldownMs: 3_600_000,
+      minMaterialEvents: 4,
+      maxDailyDreams: 8,
+      styleRotationDays: 4,
+      noiseIntensity: 'medium',
+      maxOutputTokens: 500,
+      timeoutMs: 120_000,
+      privacyMode: false,
+      storePath,
+      serveUi: false,
+      styles: [{
+        id: 'cosmic',
+        nameZh: '星际漂流',
+        nameEn: 'Cosmic Drift',
+        trigger: 'boredom',
+        imagery: ['深空尘埃', '失重的茶'],
+      }],
+    })
+    const cosmicScan = '```json\n' + JSON.stringify({
+      mood: { valence: 0.3, arousal: -0.2, dominance: 0.5 },
+      moodLabel: '安静的专注',
+      themes: ['构建'],
+      style: 'cosmic',
+    }) + '\n```'
+    const cosmicLlm = {
+      async *stream(): AsyncIterable<StreamChunk> {
+        calls.n += 1
+        yield* stream(calls.n === 1 ? cosmicScan : DREAM_TEXT)
+      },
+    }
+    const ctx = new Context()
+    ctx.reflect.provide('llm', cosmicLlm as never)
+    apply(ctx, customConfig)
+
+    ctx.emit('session/event', session(0), turnEndEvent(8))
+    await vi.waitFor(() => expect(DreamStore.open(storePath).all()).toHaveLength(1), { timeout: 2000 })
+
+    const dream = DreamStore.open(storePath).all()[0]!
+    expect(calls.n).toBe(2)
+    expect(dream.style).toBe('cosmic')
+  })
+
   it('declines a second cycle while the cooldown is warm', async () => {
     const calls = { n: 0 }
     const ctx = new Context()

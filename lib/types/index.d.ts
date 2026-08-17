@@ -30,6 +30,21 @@ export declare const DreamIncubatorConfigFields: {
     privacyMode: z<boolean, boolean>;
     provider: z<string, string>;
     model: z<string, string>;
+    styles: z<({
+        id?: string | null | undefined;
+        nameZh?: string | null | undefined;
+        nameEn?: string | null | undefined;
+        trigger?: "fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict" | null | undefined;
+        imagery?: string[] | null | undefined;
+        palette?: string | null | undefined;
+    } & import("@deepseek-ai/cosmokit").Dict)[], Schemastery.ObjectT<{
+        id: z<string, string>;
+        nameZh: z<string, string>;
+        nameEn: z<string, string>;
+        trigger: z<"fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict", "fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict">;
+        imagery: z<string[], string[]>;
+        palette: z<string, string>;
+    }>[]>;
     storePath: z<string, string>;
     serveUi: z<boolean, boolean>;
 };
@@ -45,6 +60,21 @@ export declare const DreamIncubatorConfigSchema: z<Schemastery.ObjectS<{
     privacyMode: z<boolean, boolean>;
     provider: z<string, string>;
     model: z<string, string>;
+    styles: z<({
+        id?: string | null | undefined;
+        nameZh?: string | null | undefined;
+        nameEn?: string | null | undefined;
+        trigger?: "fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict" | null | undefined;
+        imagery?: string[] | null | undefined;
+        palette?: string | null | undefined;
+    } & import("@deepseek-ai/cosmokit").Dict)[], Schemastery.ObjectT<{
+        id: z<string, string>;
+        nameZh: z<string, string>;
+        nameEn: z<string, string>;
+        trigger: z<"fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict", "fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict">;
+        imagery: z<string[], string[]>;
+        palette: z<string, string>;
+    }>[]>;
     storePath: z<string, string>;
     serveUi: z<boolean, boolean>;
 }>, Schemastery.ObjectT<{
@@ -58,6 +88,21 @@ export declare const DreamIncubatorConfigSchema: z<Schemastery.ObjectS<{
     privacyMode: z<boolean, boolean>;
     provider: z<string, string>;
     model: z<string, string>;
+    styles: z<({
+        id?: string | null | undefined;
+        nameZh?: string | null | undefined;
+        nameEn?: string | null | undefined;
+        trigger?: "fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict" | null | undefined;
+        imagery?: string[] | null | undefined;
+        palette?: string | null | undefined;
+    } & import("@deepseek-ai/cosmokit").Dict)[], Schemastery.ObjectT<{
+        id: z<string, string>;
+        nameZh: z<string, string>;
+        nameEn: z<string, string>;
+        trigger: z<"fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict", "fatigue" | "joy" | "anxiety" | "boredom" | "confusion" | "conflict">;
+        imagery: z<string[], string[]>;
+        palette: z<string, string>;
+    }>[]>;
     storePath: z<string, string>;
     serveUi: z<boolean, boolean>;
 }>>;

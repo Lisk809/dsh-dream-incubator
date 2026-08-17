@@ -24,7 +24,10 @@ import { registerDreamWebUi } from './webui/server.ts'
 import type {
   DreamIncubatorConfig,
   DreamRecord,
+  DreamStyleTrigger,
+  UserStyleDef,
 } from './types.ts'
+import { DREAM_STYLES } from './types.ts'
 
 /** Cordis plugin name. */
 export const name = 'dream-incubator'
@@ -44,6 +47,7 @@ const CONFIG_KEYS = new Set([
   'privacyMode',
   'provider',
   'model',
+  'styles',
   'storePath',
   'serveUi',
 ])
@@ -60,6 +64,16 @@ export const DreamIncubatorConfigFields = {
   privacyMode: z.boolean().required(),
   provider: z.string(),
   model: z.string(),
+  styles: z.array(z.object({
+    id: z.string().required(),
+    nameZh: z.string().required(),
+    nameEn: z.string().required(),
+    trigger: z.union([
+      'fatigue', 'joy', 'anxiety', 'boredom', 'confusion', 'conflict',
+    ] as const).required(),
+    imagery: z.array(z.string()).min(1).required(),
+    palette: z.string(),
+  })),
   storePath: z.string().required(),
   serveUi: z.boolean().required(),
 }
@@ -72,6 +86,74 @@ function assertPositiveInteger(name: string, value: unknown): void {
   if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
     throw new Error(`dream-incubator: ${name} must be a positive integer`)
   }
+}
+
+/** The mood taxonomy a style trigger must belong to. */
+const DREAM_STYLE_TRIGGERS = [
+  'fatigue', 'joy', 'anxiety', 'boredom', 'confusion', 'conflict',
+] as const
+
+/** True when the value is a non-empty string (used by style validation). */
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0
+}
+
+/**
+ * Validate the optional `styles` array and return a normalized copy. Custom
+ * styles are appended after the built-in six; ids must be unique across both
+ * sets so the rotation never produces ambiguous styles.
+ */
+function resolveUserStyles(stylesRaw: unknown): UserStyleDef[] | undefined {
+  if (stylesRaw === undefined) return undefined
+  if (!Array.isArray(stylesRaw)) {
+    throw new Error('dream-incubator: styles must be an array of style definitions')
+  }
+  const seen = new Set<string>(DREAM_STYLES)
+  return stylesRaw.map((entry, index) => {
+    const where = `styles[${index}]`
+    if (entry === null || typeof entry !== 'object') {
+      throw new Error(`dream-incubator: ${where} must be an object`)
+    }
+    const def = entry as Record<string, unknown>
+    const id = def['id']
+    if (!isNonEmptyString(id)) {
+      throw new Error(`dream-incubator: ${where}.id must be a non-empty string`)
+    }
+    if (seen.has(id)) {
+      throw new Error(`dream-incubator: duplicate dream style "${id}"`)
+    }
+    seen.add(id)
+    const nameZh = def['nameZh']
+    if (!isNonEmptyString(nameZh)) {
+      throw new Error(`dream-incubator: ${where}.nameZh must be a non-empty string`)
+    }
+    const nameEn = def['nameEn']
+    if (!isNonEmptyString(nameEn)) {
+      throw new Error(`dream-incubator: ${where}.nameEn must be a non-empty string`)
+    }
+    const trigger = def['trigger']
+    if (typeof trigger !== 'string'
+      || !(DREAM_STYLE_TRIGGERS as readonly string[]).includes(trigger)) {
+      throw new Error(`dream-incubator: ${where}.trigger must be one of "fatigue", "joy", "anxiety", "boredom", "confusion", "conflict"`)
+    }
+    const imagery = def['imagery']
+    if (!Array.isArray(imagery) || imagery.length === 0
+      || !imagery.every(isNonEmptyString)) {
+      throw new Error(`dream-incubator: ${where}.imagery must be a non-empty array of non-empty strings`)
+    }
+    const palette = def['palette']
+    if (palette !== undefined && !isNonEmptyString(palette)) {
+      throw new Error(`dream-incubator: ${where}.palette must be a non-empty string when supplied`)
+    }
+    return {
+      id,
+      nameZh,
+      nameEn,
+      trigger: trigger as DreamStyleTrigger,
+      imagery: [...imagery],
+      ...(palette !== undefined ? { palette } : {}),
+    } as UserStyleDef
+  })
 }
 
 /**
@@ -128,7 +210,12 @@ export function resolveDreamIncubatorConfig(config: DreamIncubatorConfig): Dream
     || typeof value['model'] !== 'string' || value['model'].length === 0)) {
     throw new Error('dream-incubator: provider and model overrides must be non-empty strings')
   }
-  return deepFreeze({ ...(candidate as Record<string, unknown>) } as unknown as DreamIncubatorConfig)
+  const styles = resolveUserStyles(value['styles'])
+  const resolved = {
+    ...(candidate as Record<string, unknown>),
+    ...(styles !== undefined ? { styles } : {}),
+  }
+  return deepFreeze(resolved as DreamIncubatorConfig)
 }
 
 /** Why a dream cycle was declined, when it was. */

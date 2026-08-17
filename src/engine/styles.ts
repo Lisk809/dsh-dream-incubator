@@ -5,11 +5,13 @@
  * @module dsh-dream-incubator/engine/styles
  */
 
+import { deepFreeze } from '@deepseek-ai/dsh-llm'
 import type {
   DreamStyle,
   DreamStyleDef,
   DreamScan,
   MaterialStats,
+  UserStyleDef,
 } from '../types.ts'
 
 /** The six-library style matrix (plan §3.2-②). */
@@ -64,18 +66,38 @@ export const STYLE_MATRIX: readonly DreamStyleDef[] = [
   },
 ]
 
-/** Look up one style definition by id. */
-export function styleDef(id: DreamStyle): DreamStyleDef {
-  const def = STYLE_MATRIX.find(candidate => candidate.id === id)
+/**
+ * The effective style library for one dream cycle: the built-in six followed
+ * by any user-registered styles (append-only — custom styles cannot shadow
+ * built-ins). Normalizes each user entry by filling the optional palette with
+ * the style id, mirroring the built-in "same id by default" convention.
+ * @param userStyles - validated custom styles from {@link DreamIncubatorConfig}.
+ */
+export function mergedStyleMatrix(userStyles?: readonly UserStyleDef[]): readonly DreamStyleDef[] {
+  if (userStyles === undefined || userStyles.length === 0) return STYLE_MATRIX
+  const merged: DreamStyleDef[] = STYLE_MATRIX.slice()
+  for (const custom of userStyles) {
+    merged.push({
+      ...custom,
+      imagery: [...custom.imagery],
+      palette: custom.palette ?? custom.id,
+    })
+  }
+  return deepFreeze(merged)
+}
+
+/** Look up one style definition by id within the given matrix. */
+export function styleDef(id: DreamStyle, matrix: readonly DreamStyleDef[]): DreamStyleDef {
+  const def = matrix.find(candidate => candidate.id === id)
   if (def === undefined) {
     throw new Error(`dream-incubator: unknown dream style "${id}"`)
   }
   return def
 }
 
-/** Validate that a parsed scan style is a member of the matrix. */
-export function isDreamStyle(value: unknown): value is DreamStyle {
-  return typeof value === 'string' && STYLE_MATRIX.some(def => def.id === value)
+/** Validate that a parsed scan style is a member of the given matrix. */
+export function isDreamStyle(value: unknown, matrix: readonly DreamStyleDef[]): value is DreamStyle {
+  return typeof value === 'string' && matrix.some(def => def.id === value)
 }
 
 /**
@@ -85,21 +107,27 @@ export function isDreamStyle(value: unknown): value is DreamStyle {
  * (plan §3.2-② "随机轮换机制").
  * @param rotationDays - the configured rotation period.
  * @param epochDays - whole days since the Unix epoch (local calendar days).
- * @returns an offset in [0, styles.length).
+ * @param matrix - the effective style library (built-ins + custom styles).
+ * @returns an offset in [0, matrix.length).
  */
-export function rotationOffset(rotationDays: number, epochDays: number): number {
+export function rotationOffset(
+  rotationDays: number,
+  epochDays: number,
+  matrix: readonly DreamStyleDef[],
+): number {
   const period = Math.max(1, Math.floor(rotationDays))
-  return Math.floor(epochDays / period) % STYLE_MATRIX.length
+  return Math.floor(epochDays / period) % matrix.length
 }
 
 /**
  * Rotated style list for the scan prompt.
  * @param offset - the rotation offset from {@link rotationOffset}.
+ * @param matrix - the effective style library (built-ins + custom styles).
  * @returns the matrix ordered starting at `offset`.
  */
-export function rotatedStyles(offset: number): readonly DreamStyleDef[] {
-  const safe = ((offset % STYLE_MATRIX.length) + STYLE_MATRIX.length) % STYLE_MATRIX.length
-  return [...STYLE_MATRIX.slice(safe), ...STYLE_MATRIX.slice(0, safe)]
+export function rotatedStyles(offset: number, matrix: readonly DreamStyleDef[]): readonly DreamStyleDef[] {
+  const safe = ((offset % matrix.length) + matrix.length) % matrix.length
+  return [...matrix.slice(safe), ...matrix.slice(0, safe)]
 }
 
 /**
@@ -141,8 +169,9 @@ export function fallbackStyle(stats: MaterialStats): DreamStyle {
  * Coerce a parsed scan result into a usable {@link DreamScan}, applying the
  * fallback style and clamping PAD axes. Invalid records stay invalid — the
  * caller decides whether to fail loud or degrade.
+ * @param matrix - the effective style library the scan style is checked against.
  */
-export function coerceScan(raw: unknown): DreamScan | undefined {
+export function coerceScan(raw: unknown, matrix: readonly DreamStyleDef[]): DreamScan | undefined {
   if (raw === null || typeof raw !== 'object') return undefined
   const record = raw as Record<string, unknown>
   const mood = record['mood']
@@ -166,7 +195,7 @@ export function coerceScan(raw: unknown): DreamScan | undefined {
   const themes = Array.isArray(themesRaw)
     ? themesRaw.filter((theme): theme is string => typeof theme === 'string' && theme.length > 0).slice(0, 8)
     : []
-  const style = isDreamStyle(record['style']) ? record['style'] : undefined
+  const style = isDreamStyle(record['style'], matrix) ? record['style'] : undefined
   if (style === undefined || moodLabel.length === 0) return undefined
   return {
     mood: { valence, arousal, dominance },

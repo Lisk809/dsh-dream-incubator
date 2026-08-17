@@ -12,6 +12,8 @@ import {
   resolveRoute,
   splitDreamOutput,
 } from '../src/engine/dreamer.ts'
+import { mergedStyleMatrix } from '../src/engine/styles.ts'
+import { STYLE_MATRIX } from '../src/engine/styles.ts'
 import type { DreamIncubatorConfig } from '../src/types.ts'
 import { requestHeaderEvent, turnEndEvent, userMessageEvent } from './fixtures.ts'
 
@@ -64,22 +66,38 @@ describe('resolveRoute', () => {
 
 describe('parseScan', () => {
   it('parses a well-formed scan, tolerating a code fence', () => {
-    const scan = parseScan('```json\n{"mood":{"valence":0.4,"arousal":-0.3,"dominance":0.2},"moodLabel":"缓过来了","themes":["重构"],"style":"fantasy"}\n```')
+    const scan = parseScan('```json\n{"mood":{"valence":0.4,"arousal":-0.3,"dominance":0.2},"moodLabel":"缓过来了","themes":["重构"],"style":"fantasy"}\n```', STYLE_MATRIX)
     expect(scan.style).toBe('fantasy')
     expect(scan.moodLabel).toBe('缓过来了')
     expect(scan.mood).toEqual({ valence: 0.4, arousal: -0.3, dominance: 0.2 })
   })
 
   it('rejects unparseable text', () => {
-    expect(() => parseScan('I had a dream about...')).toThrow(DreamScanError)
+    expect(() => parseScan('I had a dream about...', STYLE_MATRIX)).toThrow(DreamScanError)
   })
 
   it('rejects records outside the style matrix', () => {
-    expect(() => parseScan('{"mood":{"valence":0,"arousal":0,"dominance":0},"moodLabel":"x","themes":[],"style":"neon"}')).toThrow(DreamScanError)
+    expect(() => parseScan('{"mood":{"valence":0,"arousal":0,"dominance":0},"moodLabel":"x","themes":[],"style":"neon"}', STYLE_MATRIX)).toThrow(DreamScanError)
   })
 
   it('rejects records missing PAD axes', () => {
-    expect(() => parseScan('{"mood":{"valence":0},"moodLabel":"x","themes":[],"style":"noir"}')).toThrow(DreamScanError)
+    expect(() => parseScan('{"mood":{"valence":0},"moodLabel":"x","themes":[],"style":"noir"}', STYLE_MATRIX)).toThrow(DreamScanError)
+  })
+
+  it('accepts a custom style id when the merged matrix includes it', () => {
+    const matrix = mergedStyleMatrix([{
+      id: 'cosmic',
+      nameZh: '星际漂流',
+      nameEn: 'Cosmic Drift',
+      trigger: 'boredom',
+      imagery: ['深空尘埃'],
+    }])
+    const scan = parseScan('{"mood":{"valence":0,"arousal":0,"dominance":0},"moodLabel":"x","themes":[],"style":"cosmic"}', matrix)
+    expect(scan.style).toBe('cosmic')
+  })
+
+  it('rejects a custom style id against the built-in matrix alone', () => {
+    expect(() => parseScan('{"mood":{"valence":0,"arousal":0,"dominance":0},"moodLabel":"x","themes":[],"style":"cosmic"}', STYLE_MATRIX)).toThrow(DreamScanError)
   })
 })
 

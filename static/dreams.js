@@ -29,6 +29,14 @@ const STYLE_ACCENTS = {
   horror: '#8a5e5e',
 }
 
+/** 用户自定义风格的展示名（星盘拉取 settings 后填充，id → nameZh）。 */
+let customStyleNames = {}
+
+/** 风格展示名：server 提供的自定义名 → 内置名表 → 原始 id。 */
+function styleNameOf(style) {
+  return customStyleNames[style] || STYLE_NAMES[style] || style
+}
+
 /** 情绪筛选分桶：按 valence 符号位切三档。 */
 const MOOD_BUCKETS = [
   { key: 'bright', label: '明亮', test: (mood) => mood.valence > 0.15 },
@@ -236,7 +244,7 @@ function renderHero() {
   }
 
   el.hero.dataset.style = record.style || 'surreal'
-  const styleName = STYLE_NAMES[record.style] || record.style
+  const styleName = styleNameOf(record.style)
   const fromOldest = state.records.length
 
   const left = make('div', 'hero-left')
@@ -316,7 +324,7 @@ function attachTilt(tilt, card) {
 /** 一张碎片卡：li 入场 → float 悬浮 → tilt 倾斜 → clip 裁剪光影。 */
 function buildCard(record, i) {
   const number = state.records.length - state.records.indexOf(record)
-  const styleName = STYLE_NAMES[record.style] || record.style
+  const styleName = styleNameOf(record.style)
   const span = cardSpan(record.id)
 
   const card = document.createElement('li')
@@ -650,7 +658,14 @@ async function openStardial() {
     const response = await fetch('/dreams/api/settings')
     if (!response.ok) throw new Error(`http ${response.status}`)
     const data = await response.json()
-    buildStardial(data.settings || null)
+    const settings = data.settings || null
+    if (settings && Array.isArray(settings.styles)) {
+      customStyleNames = {}
+      for (const def of settings.styles) {
+        if (def && typeof def.id === 'string') customStyleNames[def.id] = def.nameZh || def.id
+      }
+    }
+    buildStardial(settings)
   } catch {
     body.textContent = ''
     body.appendChild(make('p', 'empty-note', '星盘读数失败——引擎没有回应。'))

@@ -25,6 +25,7 @@ import { drawNoise } from './noise.ts'
 import {
   coerceScan,
   heuristicMoodHints,
+  mergedStyleMatrix,
   rotationOffset,
   rotatedStyles,
   styleDef,
@@ -35,6 +36,7 @@ import type {
   DreamRecord,
   DreamRequest,
   DreamScan,
+  DreamStyleDef,
   ModelRoute,
 } from '../types.ts'
 
@@ -166,9 +168,10 @@ async function runScan(
   route: ModelRoute,
   sessionId: SessionId,
   request: DreamRequest,
+  matrix: readonly DreamStyleDef[],
   signal: AbortSignal,
 ): Promise<string> {
-  const styles = rotatedStyles(request.rotationOffset)
+  const styles = rotatedStyles(request.rotationOffset, matrix)
   const hints = heuristicMoodHints(request.stats)
   const options = frameCall(
     route,
@@ -189,9 +192,10 @@ async function runDream(
   sessionId: SessionId,
   request: DreamRequest,
   scan: DreamScan,
+  matrix: readonly DreamStyleDef[],
   signal: AbortSignal,
 ): Promise<string> {
-  const style = styleDef(scan.style)
+  const style = styleDef(scan.style, matrix)
   const options = frameCall(
     route,
     sessionId,
@@ -215,8 +219,11 @@ export function splitDreamOutput(output: string): { title: string; text: string 
   return { title: title.length > 0 ? title : '无题之梦', text: text.length > 0 ? text : output }
 }
 
-/** Parse and validate the scan JSON; an invalid record fails loud. */
-export function parseScan(rawText: string): DreamScan {
+/**
+ * Parse and validate the scan JSON; an invalid record fails loud.
+ * @param matrix - the effective style library the scan style is checked against.
+ */
+export function parseScan(rawText: string, matrix: readonly DreamStyleDef[]): DreamScan {
   let parsed: unknown
   try {
     const json = rawText
@@ -227,7 +234,7 @@ export function parseScan(rawText: string): DreamScan {
   } catch {
     throw new DreamScanError('dream-incubator: scan stage returned unparseable JSON')
   }
-  const scan = coerceScan(parsed)
+  const scan = coerceScan(parsed, matrix)
   if (scan === undefined) {
     throw new DreamScanError('dream-incubator: scan stage returned an invalid record (style not in the matrix or malformed mood)')
   }
@@ -262,13 +269,14 @@ export async function generateDream(
     throw new DreamMaterialEmptyError('dream-incubator: no material to dream about')
   }
   const route = resolveRoute(config, events)
+  const matrix = mergedStyleMatrix(config.styles)
   const now = Date.now()
   const request: DreamRequest = {
     sessionId: session.id,
     materialSeqs: lines.map(line => line.seq),
     materialLines: lines,
     stats,
-    rotationOffset: rotationOffset(config.styleRotationDays, epochDays(now)),
+    rotationOffset: rotationOffset(config.styleRotationDays, epochDays(now), matrix),
     noiseSeeds: drawNoise(config.noiseIntensity, rng),
     privacyMode: config.privacyMode,
     maxOutputTokens: config.maxOutputTokens,
@@ -283,9 +291,9 @@ export async function generateDream(
   }
   try {
     using callDeadline = deadline(controller.signal, config.timeoutMs, DREAM_TIMEOUT_CODE)
-    const scanText = await runScan(ctx, config, route, session.id, request, callDeadline.signal)
-    const scan = parseScan(scanText)
-    const dreamText = await runDream(ctx, config, route, session.id, request, scan, callDeadline.signal)
+    const scanText = await runScan(ctx, config, route, session.id, request, matrix, callDeadline.signal)
+    const scan = parseScan(scanText, matrix)
+    const dreamText = await runDream(ctx, config, route, session.id, request, scan, matrix, callDeadline.signal)
     const { title, text } = splitDreamOutput(dreamText)
     return {
       id: DreamId(`dream-${randomUUID()}`),

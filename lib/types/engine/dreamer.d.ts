@@ -10,7 +10,7 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { Session } from '@deepseek-ai/dsh-session';
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types';
-import type { DreamIncubatorConfig, DreamRecord, DreamScan, ModelRoute } from '../types.ts';
+import type { DreamIncubatorConfig, DreamRecord, DreamScan, DreamStyleDef, ModelRoute } from '../types.ts';
 /** Cap one dream cycle's end-to-end run. */
 export declare const DREAM_TIMEOUT_CODE = "DREAM_TIMEOUT";
 /** Raised when a dream cycle cannot resolve a model route. */
@@ -39,8 +39,11 @@ export declare function splitDreamOutput(output: string): {
     title: string;
     text: string;
 };
-/** Parse and validate the scan JSON; an invalid record fails loud. */
-export declare function parseScan(rawText: string): DreamScan;
+/**
+ * Parse and validate the scan JSON; an invalid record fails loud.
+ * @param matrix - the effective style library the scan style is checked against.
+ */
+export declare function parseScan(rawText: string, matrix: readonly DreamStyleDef[]): DreamScan;
 /**
  * Run one full dream cycle over a session: scan its material window, decide
  * style and mood, draw noise, generate the dream, and assemble the record.

@@ -28,16 +28,29 @@ All keys are optional; the defaults below are supplied by the harness patch (thi
 | `cooldownMs` | `3600000` | Minimum quiet interval between two dreams for one session |
 | `minMaterialEvents` | `4` | Minimum material events since the last dream before the engine may dream |
 | `maxDailyDreams` | `8` | Hard daily ceiling per session (resets at midnight) |
-| `styleRotationDays` | `4` | Rotate the six-style library every N days |
+| `styleRotationDays` | `4` | Rotate the style library (built-ins + `styles` entries) every N days |
 | `noiseIntensity` | `medium` | Activation–Synthesis noise strength: `low` \| `medium` \| `high` |
 | `maxOutputTokens` | `500` | Output-token cap for both the scan and the dream model calls |
 | `timeoutMs` | `120000` | End-to-end deadline for one dream cycle |
 | `privacyMode` | `false` | When true, the scan prompt receives message counts and tool names but no user text |
 | `provider` / `model` | `null` | Optional explicit model route (must appear together). When absent, the engine reuses the session's latest logged `request/header` route |
+| `styles` | `[]` | Custom dream styles appended after the built-in six, participating in the same rotation. Each entry: `id` (unique, not colliding with built-ins), `nameZh` / `nameEn`, `trigger` (`fatigue` \| `joy` \| `anxiety` \| `boredom` \| `confusion` \| `conflict`), `imagery` (non-empty string array), optional `palette` (CSS palette key; defaults to the style `id`) |
 | `storePath` | `~/.dsh/dream-incubator/dreams.json` | JSON dream ledger location |
 | `serveUi` | `true` | Serve the immersive page at `/dreams` (web profiles only) |
 
-Invalid values (unknown keys, non-integer limits, `provider` without `model`, …) throw at load time — the harness surfaces the exact message.
+Invalid values (unknown keys, non-integer limits, `provider` without `model`, duplicate style ids, …) throw at load time — the harness surfaces the exact message.
+
+Custom styles example:
+
+```yaml
+styles:
+  - id: cosmic
+    nameZh: 星际漂流
+    nameEn: Cosmic Drift
+    trigger: boredom
+    imagery: [深空尘埃, 失重的茶, 土星环上的雪]
+    # palette: nebula   # optional; defaults to the style id
+```
 
 ## Commands
 

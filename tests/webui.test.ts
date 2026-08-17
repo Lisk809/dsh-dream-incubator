@@ -355,8 +355,34 @@ describe('webui routes', () => {
       privacyMode: false,
       serveUi: true,
       route: null,
+      styles: [
+        { id: 'cyberpunk', nameZh: '赛博朋克 / 废土', palette: 'cyberpunk' },
+        { id: 'fantasy', nameZh: '奇幻冒险', palette: 'fantasy' },
+        { id: 'noir', nameZh: '黑色悬疑', palette: 'noir' },
+        { id: 'surreal', nameZh: '超现实主义', palette: 'surreal' },
+        { id: 'fable', nameZh: '童话寓言', palette: 'fable' },
+        { id: 'horror', nameZh: '恐怖怪诞', palette: 'horror' },
+      ],
     })
     expect('storePath' in body.settings).toBe(false)
+  })
+
+  it('exposes custom styles in the settings pick-list', async () => {
+    const customConfig = resolveDreamIncubatorConfig({
+      ...baseConfig(storePath),
+      styles: [{
+        id: 'cosmic',
+        nameZh: '星际漂流',
+        nameEn: 'Cosmic Drift',
+        trigger: 'boredom',
+        imagery: ['深空尘埃', '失重的茶'],
+      }],
+    })
+    const harness = setup(storePath, customConfig)
+    const { res } = await call(route(harness, 'exact', '/dreams/api/settings').handler, 'GET', '/dreams/api/settings')
+    const body = JSON.parse(res.text()) as { settings: { styles: Array<{ id: string; nameZh: string; palette: string }> } }
+    expect(body.settings.styles).toHaveLength(7)
+    expect(body.settings.styles[6]).toEqual({ id: 'cosmic', nameZh: '星际漂流', palette: 'cosmic' })
   })
 
   it('reports the model route when one is configured', async () => {

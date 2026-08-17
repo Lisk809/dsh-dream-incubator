@@ -9,10 +9,14 @@ import type { Branded } from '@deepseek-ai/dsh-brand';
 export type DreamId = Branded<'DreamId'>;
 /** Brand a string as a {@link DreamId}. */
 export declare function DreamId(id: string): DreamId;
-/** The six dream styles of the style matrix (plan §3.2-②). */
+/** The six built-in dream styles of the style matrix (plan §3.2-②). */
 export declare const DREAM_STYLES: readonly ["cyberpunk", "fantasy", "noir", "surreal", "fable", "horror"];
-/** A style-library identity; also the CSS palette key of the WebUI. */
-export type DreamStyle = (typeof DREAM_STYLES)[number];
+/**
+ * A style-library identity; also the CSS palette key of the WebUI. Custom
+ * styles registered through {@link UserStyleDef} extend beyond the built-in
+ * set, so this is an open string rather than the built-in literal union.
+ */
+export type DreamStyle = string;
 /** Activation-Synthesis noise strength (plan §3.2-③). */
 export type NoiseIntensity = 'low' | 'medium' | 'high';
 /**
@@ -24,6 +28,8 @@ export interface PADEmotion {
     readonly arousal: number;
     readonly dominance: number;
 }
+/** The mood taxonomy shared by the style matrix (plan §3.2-②). */
+export type DreamStyleTrigger = 'fatigue' | 'joy' | 'anxiety' | 'boredom' | 'confusion' | 'conflict';
 /** The style matrix row the scan stage chooses between (plan §3.2-②). */
 export interface DreamStyleDef {
     readonly id: DreamStyle;
@@ -32,11 +38,29 @@ export interface DreamStyleDef {
     /** English display name. */
     readonly nameEn: string;
     /** The mood that most strongly triggers this style. */
-    readonly trigger: 'fatigue' | 'joy' | 'anxiety' | 'boredom' | 'confusion' | 'conflict';
+    readonly trigger: DreamStyleTrigger;
     /** Imagery keywords injected into the generation prompt. */
     readonly imagery: readonly string[];
     /** Card palette: CSS class key used by the WebUI (same id by default). */
     readonly palette: string;
+}
+/**
+ * A user-registered style appended to the built-in matrix via the `styles`
+ * configuration key. Palette is optional and defaults to the style id
+ * (the built-in convention "same id by default").
+ */
+export interface UserStyleDef {
+    readonly id: string;
+    /** Chinese display name shown on the dream card. */
+    readonly nameZh: string;
+    /** English display name. */
+    readonly nameEn: string;
+    /** The mood that most strongly triggers this style. */
+    readonly trigger: DreamStyleTrigger;
+    /** Imagery keywords injected into the generation prompt. */
+    readonly imagery: readonly string[];
+    /** Card palette: CSS class key used by the WebUI (style id by default). */
+    readonly palette?: string;
 }
 /** A single dream record persisted by the incubator store. */
 export interface DreamRecord {
@@ -119,6 +143,8 @@ export interface DreamIncubatorConfig {
     readonly provider?: string;
     /** Explicit model override; must accompany {@link provider}. */
     readonly model?: string;
+    /** Custom styles appended after the built-in six in the rotation. */
+    readonly styles?: readonly UserStyleDef[];
     readonly storePath: string;
     readonly serveUi: boolean;
 }

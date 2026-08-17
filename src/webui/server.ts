@@ -18,6 +18,7 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import type { DreamId, DreamIncubatorConfig, DreamRecord } from '../types.ts'
 import { DreamId as brandDreamId } from '../types.ts'
 import type { DreamStore } from '../store.ts'
+import { mergedStyleMatrix } from '../engine/styles.ts'
 
 /**
  * The webui root: lib/webui/ (populated from static/ by the build). The
@@ -245,6 +246,9 @@ export function registerDreamWebUi(
           privacyMode: config.privacyMode,
           serveUi: config.serveUi,
           route: config.provider !== undefined ? `${config.provider}/${config.model}` : null,
+          // The effective style library (built-ins + custom styles), so the
+          // WebUI can render custom style names without a hardcoded map.
+          styles: mergedStyleMatrix(config.styles).map(({ id, nameZh, palette }) => ({ id, nameZh, palette })),
         },
       })
     },
