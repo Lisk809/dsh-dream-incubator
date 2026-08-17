@@ -1,0 +1,35 @@
+# dsh-dream-incubator bundle patch — one row mounts both the dream engine
+# (node half, src/index.ts) and the dream WebUI (routes registered on
+# ctx.webServer when the profile has one; headless deployments keep the
+# engine and the /dream commands, only the page is absent).
+#
+# Apply with: dsh plugin --profile web add dsh-dream-incubator
+- insert:
+    - id: dream-incubator
+      name: 'dsh-dream-incubator'
+      config:
+        # Minimum quiet interval between two dreams for one session.
+        cooldownMs: 3600000
+        # Minimum material events since the last dream before the engine may dream.
+        minMaterialEvents: 4
+        # Hard daily ceiling per session (resets at local midnight).
+        maxDailyDreams: 8
+        # Rotate the style library every N days so favourite styles drift.
+        styleRotationDays: 4
+        # Activation-Synthesis noise strength: low | medium | high.
+        noiseIntensity: medium
+        # Auxiliary generation output-token cap for both scan and dream calls.
+        maxOutputTokens: 500
+        # End-to-end deadline for one dream cycle, in milliseconds.
+        timeoutMs: 120000
+        # When true, the scan prompt receives message counts and tool names
+        # but no user text (privacy mode).
+        privacyMode: false
+        # Optional explicit model route; both fields must appear together.
+        # Absent: reuse the session's latest logged request/header route.
+        provider: null
+        model: null
+        # JSON dream store location; the dsh home directory by default.
+        storePath: !!js dshHomePath('dream-incubator/dreams.json')
+        # Serve the immersive page at /dreams (web profiles only).
+        serveUi: true

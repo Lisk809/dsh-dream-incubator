@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>梦 · Dream Incubator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M22 25a11 11 0 0 1-15-13 11 11 0 1 0 15 13z' fill='%23C9A961'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/dreams/assets/dreams.css">
+</head>
+<body>
+  <!-- 氛围层：紫蓝星云与漂移的云朵，铺在所有内容之下 -->
+  <div class="nebula" id="nebula" aria-hidden="true"></div>
+
+  <header class="site-head" data-mounted>
+    <p class="wordmark"><em>梦</em><span class="wordmark-sub">Dream&nbsp;Incubator</span></p>
+    <p class="head-stats">
+      <span class="status"><i class="status-dot" data-status="connecting" aria-hidden="true"></i><span data-role="stream-label">连接梦境</span></span>
+      <span class="head-count" data-role="count">—</span>
+    </p>
+  </header>
+
+  <main>
+    <section class="hero" id="hero" aria-live="polite">
+      <div class="hero-skeleton" id="hero-skeleton" aria-hidden="true">
+        <span class="sk sk-eyebrow"></span>
+        <span class="sk sk-title"></span>
+        <span class="sk sk-title short"></span>
+        <span class="sk sk-prose"></span>
+        <span class="sk sk-prose half"></span>
+      </div>
+    </section>
+
+    <section class="gallery-wrap">
+      <div class="gallery" id="gallery">
+        <header class="gallery-head">
+          <h2>梦境画廊</h2>
+          <p class="ledger-status" data-role="status" role="status"></p>
+        </header>
+        <p class="gallery-stats" data-role="gallery-stats"></p>
+        <div class="filter-bar" data-role="filters" role="group" aria-label="筛选梦境"></div>
+        <div class="collage" id="collage" role="list"></div>
+      </div>
+      <aside class="shelf" id="shelf" aria-label="收藏架">
+        <header class="shelf-head">
+          <h2>收藏架</h2>
+        </header>
+        <ul class="shelf-list" id="shelf-list"></ul>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <p data-role="engine">引擎 · 激活-合成 · 情绪扫描 · 噪声种子</p>
+    <button class="moon-btn" id="moon-btn" type="button" aria-label="月亮">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M22 25a11 11 0 0 1-15-13 11 11 0 1 0 15 13z"/></svg>
+    </button>
+  </footer>
+
+  <!-- 梦境详情：点击卡片后溶解浮现 -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="梦境详情" hidden>
+    <article class="overlay-panel" id="overlay-panel"></article>
+  </div>
+
+  <!-- 梦境星盘：页尾月亮 7 连击开启的只读控制台 -->
+  <aside class="stardial" id="stardial" role="dialog" aria-modal="true" aria-label="梦境星盘" hidden>
+    <header class="stardial-head">
+      <h2>梦境星盘</h2>
+      <button class="btn stardial-close" type="button">关闭</button>
+    </header>
+    <div class="astrolabe" data-role="stardial-body"></div>
+    <p class="stardial-note">设置由梦境引擎掌控——改天意请回到会话里输入 /dreamsettings。</p>
+  </aside>
+
+  <script src="/dreams/assets/dreams.js"></script>
+</body>
+</html>

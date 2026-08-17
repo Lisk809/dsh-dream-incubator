@@ -1,0 +1,1289 @@
+/* ============================================================
+   Dream Incubator — 深夜美术馆
+   Canvas: 暖 zinc-950 · Display: Fraunces (italic) · Body: Geist
+   每个 style 只借一点低饱和的色光；氛围层由紫蓝星云与云朵构成。
+   画廊是悬浮的不规则碎片：clip-path 多边形 + drop-shadow 光影。
+   ============================================================ */
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/dreams/assets/fonts/fraunces-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: italic;
+  font-weight: 300 600;
+  font-display: swap;
+  src: url('/dreams/assets/fonts/fraunces-italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/dreams/assets/fonts/geist-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/dreams/assets/fonts/geist-mono-normal.woff2') format('woff2');
+}
+
+/* ---------- tokens ---------- */
+
+:root {
+  --canvas: #0b0b10;
+  --surface: #131318;
+  --surface-2: #1a1a21;
+  --ink: #e8e6e1;
+  --muted: #8f8c86;
+  --faint: #5c5a55;
+  --hairline: rgba(232, 230, 225, 0.09);
+  --accent: #c9a961;
+  --accent-ink: #e8e6e1;
+
+  /* 紫蓝梦幻氛围层 */
+  --violet: #8a7bd6;
+  --blue: #5d7fd9;
+  --nebula-a: rgba(124, 104, 214, 0.16);
+  --nebula-b: rgba(76, 110, 214, 0.13);
+  --cloud: rgba(232, 230, 225, 0.075);
+  --cloud-core: rgba(244, 242, 236, 0.16);
+
+  --font-display: 'Fraunces', 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  --font-body: 'Geist', 'PingFang SC', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', ui-monospace, monospace;
+
+  --radius-lg: 1.5rem;
+  --radius-md: 0.875rem;
+  --max-w: 1400px;
+  --pad: clamp(1rem, 4vw, 4rem);
+  --gap-section: clamp(3rem, 8vw, 6rem);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- reset & base ---------- */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(201, 169, 97, 0.3);
+  color: var(--ink);
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- 氛围层：星云 + 云朵（铺在一切之下） ---------- */
+
+.nebula {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* 鼠标视差：--px/--py 由 JS 写入根元素 */
+  transform: translate3d(
+    calc((var(--px, 0.5) - 0.5) * -3rem),
+    calc((var(--py, 0.5) - 0.5) * -2rem),
+    0
+  );
+}
+
+.nebula-layer {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  filter: blur(70px);
+  animation: nebula-drift var(--dur, 55s) ease-in-out infinite alternate;
+  animation-delay: var(--del, 0s);
+}
+
+.nebula-layer:nth-child(1) {
+  background: radial-gradient(closest-side, var(--nebula-a), transparent 70%);
+  top: -20vmax;
+  left: -12vmax;
+  --dur: 46s;
+  --dx: 24vmax;
+  --dy: 14vmax;
+}
+
+.nebula-layer:nth-child(2) {
+  background: radial-gradient(closest-side, var(--nebula-b), transparent 70%);
+  top: 18vmax;
+  right: -18vmax;
+  --dur: 64s;
+  --del: -18s;
+  --dx: -20vmax;
+  --dy: 10vmax;
+}
+
+.nebula-layer:nth-child(3) {
+  background:
+    radial-gradient(closest-side, var(--violet), transparent 72%);
+  opacity: 0.35;
+  bottom: -24vmax;
+  left: 30vmax;
+  width: 42vmax;
+  height: 42vmax;
+  --dur: 58s;
+  --del: -32s;
+  --dx: -14vmax;
+  --dy: -12vmax;
+}
+
+@keyframes nebula-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--dx, 20vmax), var(--dy, 10vmax), 0); }
+}
+
+/* 漂移的雾状云朵：nth-child 固定时长与延迟，缓慢横穿视口 */
+.cloud {
+  position: absolute;
+  top: var(--cy, 22%);
+  left: 0;
+  width: 26vmax;
+  height: 9vmax;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--cloud-core), var(--cloud) 46%, transparent 74%);
+  filter: blur(18px);
+  animation: cloud-drift var(--dur, 90s) linear infinite;
+  animation-delay: var(--del, 0s);
+}
+
+.cloud:nth-child(4) { --cy: 14%; --dur: 105s; }
+.cloud:nth-child(5) { --cy: 38%; --dur: 84s; --del: -30s; }
+.cloud:nth-child(6) { --cy: 62%; --dur: 120s; --del: -58s; }
+.cloud:nth-child(7) { --cy: 82%; --dur: 96s; --del: -84s; }
+
+@keyframes cloud-drift {
+  from { transform: translateX(-30vmax); }
+  to { transform: translateX(115vw); }
+}
+
+/* ---------- layout shell ---------- */
+
+main,
+.site-foot {
+  position: relative;
+  z-index: 1;
+}
+
+main {
+  max-width: var(--max-w);
+  margin-inline: auto;
+  padding-inline: var(--pad);
+}
+
+.site-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--max-w);
+  margin-inline: auto;
+  padding: 1.25rem var(--pad);
+  background: rgba(19, 19, 24, 0.82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.wordmark {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.wordmark em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 340;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+
+.wordmark-sub {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.head-stats {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 999px;
+  background: var(--faint);
+}
+
+.status-dot[data-status='connecting'] {
+  background: var(--accent);
+  animation: dot-pulse 1.8s var(--ease) infinite;
+}
+
+.status-dot[data-status='connected'] {
+  background: #5f9e6e;
+}
+
+.status-dot[data-status='lost'] {
+  background: #a4584f;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.site-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--max-w);
+  margin-inline: auto;
+  padding: 2rem var(--pad) clamp(2.5rem, 6vw, 4rem);
+  border-top: 1px solid var(--hairline);
+}
+
+.site-foot p {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+/* 页尾月牙：星盘的隐藏入口（连点 7 次） */
+.moon-btn {
+  background: none;
+  border: 0;
+  padding: 0.25rem;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 0.3s var(--ease), transform 0.3s var(--ease);
+}
+
+.moon-btn svg {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: currentColor;
+}
+
+.moon-btn:hover {
+  color: var(--violet);
+  transform: translateY(-0.125rem);
+}
+
+/* ---------- hero: 最新一场梦 ---------- */
+
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding-block: clamp(4rem, 10vh, 7rem) var(--gap-section);
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(38rem 22rem at 78% 12%, rgba(201, 169, 97, 0.09), transparent 70%),
+    radial-gradient(30rem 20rem at 12% 88%, rgba(201, 169, 97, 0.05), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-left,
+.hero-right {
+  position: relative;
+}
+
+.hero-eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.hero-eyebrow .dream-index {
+  color: var(--accent);
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 380;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin-bottom: 2rem;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.hero-mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  color: var(--accent-ink);
+}
+
+.pad-glyph {
+  width: clamp(6.5rem, 9vw, 8.5rem);
+  margin-top: 2.5rem;
+}
+
+.hero-prose {
+  font-family: var(--font-body);
+  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  line-height: 1.8;
+  max-width: 65ch;
+  color: rgba(226, 224, 216, 0.88);
+  white-space: pre-wrap;
+}
+
+.hero-noise {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 2.5rem;
+}
+
+.noise-chip {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 0.3125rem 0.6875rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.noise-chip-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: 0.375rem;
+  flex-basis: 100%;
+}
+
+/* 噪声种子颗粒：激活-合成的可视化，只做 transform 漂移 */
+.motes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mote {
+  position: absolute;
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.22;
+  animation: mote-drift var(--dur, 52s) var(--ease) infinite alternate;
+  animation-delay: var(--del, 0s);
+}
+
+@keyframes mote-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(var(--dx, 4rem), var(--dy, -3rem), 0); }
+}
+
+/* 每场梦的色光：六个风格各借一笔，饱和度压在 80% 以下 */
+.hero[data-style='cyberpunk'] { --accent: #6e9ac4; }
+.hero[data-style='fantasy']  { --accent: #c9a961; }
+.hero[data-style='noir']     { --accent: #9a9aa3; }
+.hero[data-style='surreal']  { --accent: #6fa6a0; }
+.hero[data-style='fable']    { --accent: #b98c8c; }
+.hero[data-style='horror']   { --accent: #8a5e5e; }
+
+/* ---------- empty / skeleton ---------- */
+
+.hero-empty {
+  position: relative;
+  padding-block: clamp(4rem, 10vh, 7rem) var(--gap-section);
+}
+
+.hero-empty-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 380;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.15;
+  margin-bottom: 1.5rem;
+}
+
+.hero-empty-note {
+  color: var(--muted);
+  max-width: 40ch;
+}
+
+.hero-skeleton {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: clamp(2rem, 5vw, 5rem);
+  padding-block: clamp(4rem, 10vh, 7rem) var(--gap-section);
+}
+
+.sk {
+  display: block;
+  height: 1.125rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(110deg, var(--surface) 30%, #2a2a33 50%, var(--surface) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.sk-eyebrow { width: 40%; height: 0.8125rem; margin-bottom: 1.75rem; }
+.sk-title { width: 92%; height: 3.25rem; margin-bottom: 0.875rem; }
+.sk-title.short { width: 55%; height: 3.25rem; margin-bottom: 2.5rem; }
+.sk-prose { width: 100%; margin-bottom: 0.75rem; }
+.sk-prose.half { width: 72%; }
+
+/* ---------- 梦境画廊：悬浮碎片拼贴 ---------- */
+
+.gallery-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: clamp(2rem, 4vw, 4rem);
+  padding-block: var(--gap-section);
+}
+
+.gallery-head,
+.shelf-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.gallery-head h2,
+.shelf-head h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.625rem;
+  letter-spacing: 0.01em;
+}
+
+.ledger-status {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--faint);
+  min-height: 1em;
+}
+
+/* 统计行：「你已做过 N 场梦，最常梦见 X，最近偏爱 Y」+ 幽默短句 */
+.gallery-stats {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--muted);
+  margin-bottom: 1.25rem;
+}
+
+.gallery-stats .stats-filtered {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+/* 筛选条：风格 / 情绪 / 时间，单选可取消 */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.75rem;
+  padding-block: 0.875rem 1rem;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+}
+
+.filter-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-right: 0.125rem;
+}
+
+.filter-chip {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.3125rem 0.75rem;
+  cursor: pointer;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease), background-color 0.18s var(--ease);
+}
+
+.filter-chip:hover {
+  color: var(--ink);
+}
+
+.filter-chip.is-active {
+  color: var(--accent);
+  border-color: rgba(201, 169, 97, 0.45);
+  background: rgba(201, 169, 97, 0.09);
+}
+
+/* 拼贴网格：DOM 顺序即时间顺序（新在前），dense 回填洞眼。
+ * 行高下限：跨行卡片共享隐式行时，auto 行高会把最后的跨行卡
+ * 压扁（d8 tall + d9 big 共享行 → d9 只剩 290px 且内容被裁），
+ * minmax 保证每行至少一普通卡高，跨行卡 ≥ 2 行。 */
+.collage {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-auto-rows: minmax(20.5rem, auto);
+  grid-auto-flow: dense;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+/* 卡片三层体系：li 入场 → float 悬浮 → tilt 倾斜 → clip 裁剪光影 */
+.card {
+  grid-column: span 1;
+  cursor: pointer;
+  opacity: 0;
+  animation: card-in 0.8s var(--ease) forwards;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+/* 筛选/更新重建时不重放入场动画 */
+.collage.is-filtered .card {
+  animation: none;
+  opacity: 1;
+}
+
+.card:focus-visible {
+  outline-offset: 6px;
+}
+
+.card-tall { grid-row: span 2; }
+.card-wide { grid-column: span 2; }
+.card-big { grid-column: span 2; grid-row: span 2; }
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(1.25rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 悬浮：缓慢的上下漂动 + 极小角度摆动，时长相位由 id 哈希决定 */
+.card-float {
+  height: 100%;
+  animation: card-float var(--dur, 7s) ease-in-out infinite alternate;
+  animation-delay: var(--del, 0s);
+}
+
+@keyframes card-float {
+  from { transform: translate3d(0, 0, 0) rotate(-0.35deg); }
+  to { transform: translate3d(0, -0.625rem, 0) rotate(0.35deg); }
+}
+
+/* 倾斜：JS 只写 --rx/--ry，hover 缩放走 --hover，transform 字符串永不重写 */
+.card-tilt {
+  height: 100%;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--hover, 1));
+  /* drop-shadow 必须在裁剪元素的父级上：clip-path 会裁掉同元素
+   * 滤镜的输出。基础版是 rgba 阴影（全浏览器可用），暖 accent
+   * 增强版在文件末尾的 @supports 块里。 */
+  filter:
+    drop-shadow(0 0.75rem 1.25rem rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 1.5rem var(--nebula-a));
+  transition: transform 0.6s var(--ease), filter 0.4s var(--ease);
+}
+
+.card-tilt.is-tilting {
+  transition: none;
+}
+
+/* 裁剪层：clip-path 多边形 + 内描边 + 紫蓝高光（drop-shadow 在
+ * 父级 .card-tilt 上，否则会被 clip-path 一起裁掉）。 */
+.card-clip {
+  position: relative;
+  height: 100%;
+  padding: clamp(1.375rem, 2.5vw, 2rem);
+  background: linear-gradient(160deg, var(--surface-2), var(--surface));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.card-clip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 55% at 82% 10%, var(--nebula-b), transparent 70%);
+  pointer-events: none;
+}
+
+@media (pointer: fine) {
+  .card-tilt:hover {
+    --hover: 1.03;
+  }
+
+  .card:hover .card-tilt {
+    filter:
+      drop-shadow(0 1rem 1.75rem rgba(0, 0, 0, 0.55))
+      drop-shadow(0 0 2.25rem var(--nebula-a));
+  }
+}
+
+/* 卡片内的内容：padding 保证落在多边形内切圆之内 */
+.dream-index {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-eyebrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.875rem;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.375rem;
+  line-height: 1.3;
+  margin-bottom: 0.625rem;
+}
+
+.card-big .card-title {
+  font-size: clamp(1.5rem, 2.5vw, 1.875rem);
+}
+
+.card-excerpt {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.875rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.125rem;
+}
+
+.card-actions .btn {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+/* 每张卡片的风格色光，与 hero 同一套矩阵 */
+.card[data-style='cyberpunk'] { --accent: #6e9ac4; }
+.card[data-style='fantasy']  { --accent: #c9a961; }
+.card[data-style='noir']     { --accent: #9a9aa3; }
+.card[data-style='surreal']  { --accent: #6fa6a0; }
+.card[data-style='fable']    { --accent: #b98c8c; }
+.card[data-style='horror']   { --accent: #8a5e5e; }
+
+.collage .empty-note {
+  grid-column: 1 / -1;
+}
+
+/* ---------- 收藏架 ---------- */
+
+.shelf-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.875rem;
+}
+
+.shelf-item {
+  padding: 1.125rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+}
+
+.shelf-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.0625rem;
+  margin-bottom: 0.375rem;
+}
+
+.shelf-meta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.empty-note {
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  color: var(--faint);
+  padding: 1.5rem 0;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.18s var(--ease), background-color 0.18s var(--ease), color 0.18s var(--ease);
+}
+
+.btn:hover {
+  background: var(--surface-2);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn-collect {
+  color: var(--muted);
+}
+
+.btn-collect.is-active {
+  color: var(--accent);
+  border-color: rgba(201, 169, 97, 0.45);
+  background: rgba(201, 169, 97, 0.09);
+}
+
+.btn-forget {
+  color: var(--faint);
+}
+
+/* ---------- 梦境详情弹层（溶解浮现） ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--pad);
+  background: rgba(19, 19, 24, 0.55);
+  backdrop-filter: blur(8px);
+  overflow-y: auto;
+  opacity: 0;
+  transition: opacity 0.45s var(--ease);
+}
+
+.overlay.is-open {
+  opacity: 1;
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay-panel {
+  position: relative;
+  width: min(44rem, 100%);
+  max-height: min(88vh, 56rem);
+  overflow-y: auto;
+  background: linear-gradient(165deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  box-shadow:
+    0 2rem 5rem rgba(0, 0, 0, 0.5),
+    0 0 3rem var(--nebula-a);
+}
+
+.overlay-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  min-height: 2.5rem;
+  padding-inline: 0.875rem;
+  font-size: 0.875rem;
+}
+
+.overlay-style {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.overlay-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 380;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.overlay-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.overlay-text {
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  color: rgba(230, 228, 220, 0.9);
+  white-space: pre-wrap;
+  margin-bottom: 2.5rem;
+}
+
+.overlay-glyph {
+  margin-bottom: 2.5rem;
+}
+
+.overlay-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.overlay-chips:last-child {
+  margin-bottom: 0;
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 0.3125rem 0.6875rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.chip-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-top: 0.375rem;
+  flex-basis: 100%;
+}
+
+/* ---------- 梦境星盘：只读控制台 ---------- */
+
+.stardial {
+  position: fixed;
+  z-index: 60;
+  top: 50%;
+  left: 50%;
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(165deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  box-shadow:
+    0 2rem 5rem rgba(0, 0, 0, 0.5),
+    0 0 3rem var(--nebula-a);
+  opacity: 0;
+  transition: opacity 0.45s var(--ease);
+}
+
+.stardial.is-open {
+  opacity: 1;
+}
+
+.stardial[hidden] {
+  display: none;
+}
+
+.stardial-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stardial-head h2 {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 380;
+  font-size: 1.75rem;
+}
+
+.stardial-close {
+  min-height: 2.5rem;
+  padding-inline: 0.875rem;
+  font-size: 0.75rem;
+}
+
+/* 星盘本体：同心轨道 + 沿环排布的设置星点 */
+.astrolabe {
+  position: relative;
+  aspect-ratio: 1;
+  width: min(27rem, 100%);
+  margin-inline: auto;
+}
+
+.orbit {
+  position: absolute;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.orbit-1 { inset: 10%; }
+.orbit-2 { inset: 26%; }
+
+.orbit::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  width: 0.25rem;
+  height: 0.25rem;
+  margin-left: -0.125rem;
+  border-radius: 999px;
+  background: var(--violet);
+  opacity: 0.7;
+}
+
+.orbit-2::before {
+  top: 6%;
+  background: var(--blue);
+}
+
+.astrolabe-core {
+  position: absolute;
+  inset: 39%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.25rem;
+  border: 1px solid rgba(201, 169, 97, 0.4);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(201, 169, 97, 0.08), transparent 80%);
+  text-align: center;
+}
+
+.astrolabe-core em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.375rem;
+  line-height: 1.1;
+  color: var(--accent);
+}
+
+.core-route {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--faint);
+  max-width: 7rem;
+  overflow-wrap: anywhere;
+}
+
+.star-item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 5rem;
+}
+
+.star-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.star-value {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink);
+}
+
+.star-item:nth-child(odd) .star-value {
+  color: var(--violet);
+}
+
+.star-item:nth-child(even) .star-value {
+  color: var(--blue);
+}
+
+.stardial-note {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--faint);
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+/* ---------- motion & a11y ---------- */
+
+[data-mounted] {
+  animation: page-in 0.8s var(--ease) both;
+}
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 1024px) {
+  .gallery-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .shelf-list {
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .hero,
+  .hero-skeleton {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .hero-title {
+    font-size: clamp(2.125rem, 9vw, 3rem);
+  }
+
+  .collage {
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 1rem;
+  }
+
+  .card-tall,
+  .card-wide,
+  .card-big {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+
+  .filter-bar {
+    gap: 0.5rem 1rem;
+  }
+
+  .site-head {
+    padding-inline: 1rem;
+  }
+
+  .wordmark-sub {
+    display: none;
+  }
+}
+
+/* ---------- color-mix 增强（不支持时整个块跳过，基础规则已带回退） ---------- */
+
+@supports (color: color-mix(in oklab, red, blue)) {
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+
+  .site-head {
+    background: color-mix(in oklab, var(--canvas) 82%, transparent);
+  }
+
+  .hero::before {
+    background:
+      radial-gradient(38rem 22rem at 78% 12%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 70%),
+      radial-gradient(30rem 20rem at 12% 88%, color-mix(in oklab, var(--accent) 6%, transparent), transparent 70%);
+  }
+
+  .hero-prose {
+    color: color-mix(in oklab, var(--ink) 88%, var(--muted));
+  }
+
+  .sk {
+    background: linear-gradient(110deg, var(--surface) 30%, color-mix(in oklab, var(--surface-2) 70%, var(--muted)) 50%, var(--surface) 70%);
+  }
+
+  .filter-chip.is-active {
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+    background: color-mix(in oklab, var(--accent) 9%, transparent);
+  }
+
+  .btn-collect.is-active {
+    border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+    background: color-mix(in oklab, var(--accent) 9%, transparent);
+  }
+
+  .card-tilt {
+    filter:
+      drop-shadow(0 0.75rem 1.25rem color-mix(in oklab, var(--accent) 16%, transparent))
+      drop-shadow(0 0 1.5rem var(--nebula-a));
+  }
+
+  @media (pointer: fine) {
+    .card:hover .card-tilt {
+      filter:
+        drop-shadow(0 1rem 1.75rem color-mix(in oklab, var(--accent) 26%, transparent))
+        drop-shadow(0 0 2.25rem var(--nebula-a));
+    }
+  }
+
+  .card-clip {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 18%, transparent);
+  }
+
+  .card-clip::before {
+    background: radial-gradient(70% 55% at 82% 10%, color-mix(in oklab, var(--nebula-b) 34%, transparent), transparent 70%);
+  }
+
+  .overlay {
+    background: color-mix(in oklab, var(--canvas) 55%, transparent);
+  }
+
+  .overlay-text {
+    color: color-mix(in oklab, var(--ink) 90%, var(--muted));
+  }
+
+  .astrolabe-core {
+    border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+    background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 10%, transparent), transparent 80%);
+  }
+}
