@@ -1,7 +1,7 @@
 {
   "name": "dsh-dream-incubator",
   "version": "0.1.0",
-  "description": "让 DeepSeek Harness 拥有潜意识：后台异步“做梦”，把日常对话与工具日志酿成梦境报告，呈现在沉浸式 WebUI 中",
+  "description": "Give DeepSeek Harness a subconscious: it `dreams` asynchronously in the background, turning daily conversations and tool logs into dream reports presented in an immersive web interface",
   "keywords": [
     "dsh",
     "deepseek-harness",
